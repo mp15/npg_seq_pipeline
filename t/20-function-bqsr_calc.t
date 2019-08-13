@@ -16,8 +16,6 @@ use List::Util qw/first/;
 
 use Moose::Util qw(apply_all_roles);
 
-use st::api::lims;
-
 use_ok('npg_pipeline::function::bqsr_calc');
 
 my $dir     = tempdir( CLEANUP => 1);
@@ -49,11 +47,6 @@ my $runfolder_path = join q[/], $dir, 'novaseq', $runfolder;
 my $timestamp      = '20180701-123456';
 
 local $ENV{NPG_CACHED_SAMPLESHEET_FILE} = q[t/data/novaseq/180709_A00538_0010_BH3FCMDRXX/Data/Intensities/BAM_basecalls_20180805-013153/metadata_cache_26291/samplesheet_26291.csv];
-my $bc_path = join q[/], $runfolder_path,
-'Data/Intensities/BAM_basecalls_20180805-013153/no_cal';
-for ((4, 5)) {
-`mkdir -p $bc_path/lane$_`;
-}
 
 copy('t/data/novaseq/180709_A00538_0010_BH3FCMDRXX/RunInfo.xml', "$runfolder_path/RunInfo.xml") or die
 'Copy failed';
@@ -89,23 +82,6 @@ subtest 'bqsr defaulted on' => sub {
   is($ds->[0]->excluded, undef, 'function is not excluded');
 };
 
-#######
-# In an array of definitions find and return a definition
-# that corresponds to a position and, optionally, tag index.
-# Use composition property of the definition object.
-#
-sub _find {
-  my ($a, $p, $t) = @_;
-  my $d= first { my $c = $_->composition->get_component(0);
-                 $c->position == $p &&
-                 (defined $t ? $c->tag_index == $t : !defined $c->tag_index) }
-         @{$a};
-  if (!$d) {
-    die "failed to find definition for position $p, tag " . defined $t ? $t : 'none';
-  }
-  return $d;
-}
-
 subtest 'run merge_recompress' => sub {
   plan tests => 20;
 
@@ -124,9 +100,6 @@ subtest 'run merge_recompress' => sub {
 
   is ($rna_gen->id_run, 26291, 'id_run inferred correctly');
 
-  my $qc_in  = $dir . q[/novaseq/180709_A00538_0010_BH3FCMDRXX/Data/Intensities/BAM_basecalls_20180805-013153/no_cal/archive/lane4/plex3];
-  my $qc_out = join q[/], $qc_in, q[qc];
-  make_path "$bc_path/archive/tileviz";
   apply_all_roles($rna_gen, 'npg_pipeline::runfolder_scaffold');
   $rna_gen->create_product_level();
 
@@ -137,7 +110,7 @@ subtest 'run merge_recompress' => sub {
   my $command = qq{$gatk_exec BaseRecalibrator -O $dir/novaseq/180709_A00538_0010_BH3FCMDRXX/Data/Intensities/BAM_basecalls_20180805-013153/no_cal/archive/plex4/26291#4.bqsr_table -I $dir/novaseq/180709_A00538_0010_BH3FCMDRXX/Data/Intensities/BAM_basecalls_20180805-013153/no_cal/archive/plex4/26291#4.cram -R $fasta_dir/GRCh38_15_plus_hs38d1.fa --known-sites $annot_dir/dbsnp_138.hg38.vcf.gz --known-sites $annot_dir/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz};
 
   my $mem = 2000;
-  my $d = _find($da, 1, 4);
+  my $d = $da->[3];
   isa_ok ($d, 'npg_pipeline::function::definition');
   is ($d->created_by, 'npg_pipeline::function::bqsr_calc', 'created by correct');
   is ($d->created_on, $timestamp, 'timestamp');
