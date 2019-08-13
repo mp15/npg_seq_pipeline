@@ -47,7 +47,12 @@ my $runfolder_path = join q[/], $dir, 'novaseq', $runfolder;
 my $timestamp      = '20180701-123456';
 
 local $ENV{NPG_CACHED_SAMPLESHEET_FILE} = q[t/data/novaseq/180709_A00538_0010_BH3FCMDRXX/Data/Intensities/BAM_basecalls_20180805-013153/metadata_cache_26291/samplesheet_26291.csv];
-make_path($runfolder_path);
+my $bc_path = join q[/], $runfolder_path,
+'Data/Intensities/BAM_basecalls_20180805-013153/no_cal';
+for ((4, 5)) {
+`mkdir -p $bc_path/lane$_`;
+}
+
 copy('t/data/novaseq/180709_A00538_0010_BH3FCMDRXX/RunInfo.xml', "$runfolder_path/RunInfo.xml") or die
 'Copy failed';
 copy('t/data/novaseq/180709_A00538_0010_BH3FCMDRXX/RunParameters.xml', "$runfolder_path/runParameters.xml")
